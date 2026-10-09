@@ -122,15 +122,16 @@ const ANSWER_MODE = process.env.ANSWER_MODE || 'dial';
 // Vobiz may deliver via GET (query string) or POST (form body) depending on the
 // application's answer_method; accept both and normalize params.
 const handleAnswer = async (req, res) => {
-  const { CallUUID, From, To, Direction } = { ...req.query, ...req.body };
-  console.log(`[ANSWER] ${req.method} CallUUID=${CallUUID} From=${From} To=${To} Direction=${Direction} mode=${ANSWER_MODE}`);
+  const { CallUUID, From, To, Direction, endpoint } = { ...req.query, ...req.body };
+  console.log(`[ANSWER] ${req.method} CallUUID=${CallUUID} From=${From} To=${To} Direction=${Direction} endpoint=${endpoint} mode=${ANSWER_MODE}`);
 
   // App join-leg: the app's outbound call to our DID (callerId = DID) comes
   // back through this same webhook. Join the parked caller's room instead of
   // creating a new one, and skip the FCM wake (the app is already in a call).
-  const fromDigits = String(From || '').replace(/\D/g, '');
-  if (fromDigits === '917965850027' && lastConferenceRoom) {
-    console.log(`[ANSWER] join-leg From=${From} -> joining room=${lastConferenceRoom}`);
+  // Match on the To field (the DID being called) since that's what the app sends as callerId.
+  const toDigits = String(To || '').replace(/\D/g, '');
+  if (toDigits && lastConferenceRoom) {
+    console.log(`[ANSWER] join-leg To=${To} -> joining room=${lastConferenceRoom}`);
     return res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Conference startConferenceOnEnter="true"
@@ -178,7 +179,11 @@ const handleAnswer = async (req, res) => {
   }
 
   // Phase 1: bridge the caller directly to the registered app endpoint
+  // Use the 'To' field (DID that received the call) as callerId
+  // Use the 'endpoint' query parameter (set by app during provisioning) for the SIP endpoint
   const BACKEND_URL = process.env.BACKEND_URL || 'https://vobiz-dialer-backend.up.railway.app';
+  const callerId = To || '+917965850027'; // fallback to known DID
+  const sipEndpoint = endpoint || 'sip:sairam8391265128911238046@registrar.vobiz.ai'; // fallback to known endpoint
   const xml = ANSWER_MODE === 'conference'
     ? `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
@@ -191,10 +196,10 @@ const handleAnswer = async (req, res) => {
 </Response>`
     : `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Dial timeout="45" dialMusic="real" callerId="+917965850027"
+    <Dial timeout="45" dialMusic="real" callerId="${callerId}"
           callbackUrl="${BACKEND_URL}/dial-callback" callbackMethod="POST"
           action="${BACKEND_URL}/dial-status" method="POST" redirect="false">
-        <User>sip:sairam8391265128911238046@registrar.vobiz.ai</User>
+        <User>${sipEndpoint}</User>
     </Dial>
     <Speak>The customer is not available. Please try again later.</Speak>
     <Hangup/>
