@@ -128,9 +128,9 @@ const handleAnswer = async (req, res) => {
   // App join-leg: the app's outbound call to our DID (callerId = DID) comes
   // back through this same webhook. Join the parked caller's room instead of
   // creating a new one, and skip the FCM wake (the app is already in a call).
-  // Match on the To field (the DID being called) since that's what the app sends as callerId.
+  // Only applies in conference mode where a conference room exists.
   const toDigits = String(To || '').replace(/\D/g, '');
-  if (toDigits && lastConferenceRoom) {
+  if (ANSWER_MODE === 'conference' && toDigits && lastConferenceRoom) {
     console.log(`[ANSWER] join-leg To=${To} -> joining room=${lastConferenceRoom}`);
     return res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>
 <Response>
