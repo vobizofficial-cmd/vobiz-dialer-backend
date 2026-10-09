@@ -178,6 +178,7 @@ const handleAnswer = async (req, res) => {
   }
 
   // Phase 1: bridge the caller directly to the registered app endpoint
+  const BACKEND_URL = process.env.BACKEND_URL || 'https://vobiz-dialer-backend.up.railway.app';
   const xml = ANSWER_MODE === 'conference'
     ? `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
@@ -191,8 +192,8 @@ const handleAnswer = async (req, res) => {
     : `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Dial timeout="45" dialMusic="real" callerId="+917965850027"
-          callbackUrl="https://vobiz-backend-production.up.railway.app/dial-callback" callbackMethod="POST"
-          action="https://vobiz-backend-production.up.railway.app/dial-status" method="POST" redirect="false">
+          callbackUrl="${BACKEND_URL}/dial-callback" callbackMethod="POST"
+          action="${BACKEND_URL}/dial-status" method="POST" redirect="false">
         <User>sip:sairam8391265128911238046@registrar.vobiz.ai</User>
     </Dial>
     <Speak>The customer is not available. Please try again later.</Speak>
