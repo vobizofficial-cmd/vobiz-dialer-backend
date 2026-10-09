@@ -182,8 +182,9 @@ const handleAnswer = async (req, res) => {
   // Use the 'To' field (DID that received the call) as callerId
   // Use the 'endpoint' query parameter (set by app during provisioning) for the SIP endpoint
   const BACKEND_URL = process.env.BACKEND_URL || 'https://vobiz-dialer-backend.up.railway.app';
-  const callerId = To || '+917965850027'; // fallback to known DID
-  const sipEndpoint = endpoint || 'sip:sairam8391265128911238046@registrar.vobiz.ai'; // fallback to known endpoint
+  const rawTo = To || '+917965850027';
+  const callerId = rawTo.trim().replace(/^\+?/, '+'); // ensure E.164 format with +
+  const sipEndpoint = (endpoint || 'sip:sairam8391265128911238046@registrar.vobiz.ai').trim();
   const xml = ANSWER_MODE === 'conference'
     ? `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
